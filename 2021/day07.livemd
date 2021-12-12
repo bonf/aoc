@@ -1,0 +1,94 @@
+# Day 7
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+crabs =
+  Kino.Input.read(input)
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.to_integer/1)
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def run(crabs) do
+    {min, max} = Enum.min_max(crabs)
+
+    min..max
+    |> Enum.map(&{&1, calc_deltas(crabs, &1)})
+    |> Enum.min(fn {_, va}, {_, vb} -> va <= vb end)
+  end
+
+  def calc_deltas(crabs, pos) do
+    Enum.map(crabs, &abs(&1 - pos)) |> Enum.sum()
+  end
+end
+
+Part1.run(crabs)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def run(crabs) do
+    {min, max} = Enum.min_max(crabs)
+
+    min..max
+    |> Enum.map(&{&1, calc_fuel_cost(crabs, &1)})
+    |> Enum.min(fn {_, va}, {_, vb} -> va <= vb end)
+  end
+
+  def calc_fuel_cost(crabs, pos) do
+    Enum.map(crabs, fn crab ->
+      delta = abs(crab - pos)
+      div(delta * (delta + 1), 2)
+    end)
+    |> Enum.sum()
+  end
+end
+
+Part2.run(crabs)
+```
+
+## Part 2 - optimized
+
+```elixir
+defmodule Part2 do
+  def run(crabs) do
+    {min, max} = Enum.min_max(crabs)
+
+    freq = Enum.frequencies(crabs)
+
+    min..max
+    |> Enum.map(&{&1, calc_fuel_cost(freq, &1)})
+    |> Enum.min(fn {_, va}, {_, vb} -> va <= vb end)
+  end
+
+  def calc_fuel_cost(crabs, pos) do
+    Enum.map(crabs, fn {crab, qty} ->
+      delta = abs(crab - pos)
+      div(delta * (delta + 1), 2) * qty
+    end)
+    |> Enum.sum()
+  end
+end
+
+Part2.run(crabs)
+```

@@ -1,0 +1,92 @@
+# Day 3
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+digits =
+  Kino.Input.read(input)
+  |> String.split("\n", trim: true)
+  |> Enum.map(&(String.to_charlist(&1) |> List.to_tuple()))
+
+[a | _t] = digits
+
+tuple_len = tuple_size(a)
+
+total = length(digits)
+
+bits =
+  for pos <- 0..(tuple_len - 1) do
+    col = Enum.map(digits, &elem(&1, pos))
+    zero_cnt = Enum.count(col, &(&1 == ?0))
+    one_cnt = total - zero_cnt
+    if zero_cnt > one_cnt, do: {"0", "1"}, else: {"1", "0"}
+  end
+
+[gamma, epsilon] =
+  for i <- 0..1 do
+    Enum.map(bits, &elem(&1, i)) |> List.to_string() |> String.to_integer(2)
+  end
+
+IO.inspect(gamma, label: "gamma")
+IO.inspect(epsilon, label: "epsilon")
+epsilon * gamma
+```
+
+## Part 2
+
+```elixir
+defmodule Rec do
+  def rec([good], _pos, _strategy_fun),
+    do: good |> Tuple.to_list() |> List.to_string() |> String.to_integer(2)
+
+  def rec(numbers, pos, strategy_fun) do
+    # IO.inspect(numbers, label: "REC: #{pos}")
+    bits = Enum.map(numbers, &elem(&1, pos))
+    zero_cnt = Enum.count(bits, &(&1 == ?0))
+    one_cnt = length(bits) - zero_cnt
+
+    bit_to_keep = strategy_fun.(zero_cnt, one_cnt)
+
+    new_numbers = numbers |> Enum.filter(&(elem(&1, pos) == bit_to_keep))
+    rec(new_numbers, pos + 1, strategy_fun)
+  end
+
+  def strategy_oxy(zero_cnt, one_cnt) do
+    cond do
+      zero_cnt > one_cnt -> ?0
+      zero_cnt <= one_cnt -> ?1
+    end
+  end
+
+  def strategy_co2(zero_cnt, one_cnt) do
+    cond do
+      zero_cnt > one_cnt -> ?1
+      zero_cnt <= one_cnt -> ?0
+    end
+  end
+end
+
+numbers =
+  Kino.Input.read(input)
+  |> String.split("\n", trim: true)
+  |> Enum.map(&(String.to_charlist(&1) |> List.to_tuple()))
+
+[a | _t] = numbers
+tuple_len = tuple_size(a)
+
+oxy = Rec.rec(numbers, 0, &Rec.strategy_oxy/2) |> IO.inspect(label: "oxy")
+co2 = Rec.rec(numbers, 0, &Rec.strategy_co2/2) |> IO.inspect(label: "co2")
+oxy * co2
+```

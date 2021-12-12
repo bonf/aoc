@@ -1,0 +1,77 @@
+# Day 6
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+fish =
+  Kino.Input.read(input)
+  |> String.split(",", trim: true)
+  |> Enum.map(&String.to_integer/1)
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def run(fish, 0), do: fish
+
+  def run(fish, days) when is_integer(days) do
+    new_fish = Enum.map(fish, &run_fish/1) |> List.flatten()
+    run(new_fish, days - 1)
+  end
+
+  def run_fish(0), do: [6, 8]
+  def run_fish(n), do: n - 1
+end
+
+length(Part1.run(fish, 80))
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def run(fish_list, days) do
+    fish_list
+    |> Enum.frequencies()
+    |> recur(days)
+  end
+
+  def recur(fish, 0), do: fish |> Enum.map(&elem(&1, 1)) |> Enum.sum()
+
+  def recur(fish, days) do
+    new_fish =
+      Enum.reduce(fish, %{}, fn
+        {0, v}, acc ->
+          acc
+          |> update_map(6, v)
+          |> update_map(8, v)
+
+        {n, v}, acc ->
+          update_map(acc, n - 1, v)
+      end)
+
+    recur(new_fish, days - 1)
+  end
+
+  defp update_map(map, key, val) do
+    Map.update(map, key, val, &(&1 + val))
+  end
+end
+
+Part2.run(fish, 256)
+```

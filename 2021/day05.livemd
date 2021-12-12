@@ -1,0 +1,83 @@
+# Day 5
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+lines =
+  Kino.Input.read(input)
+  |> String.split("\n", trim: true)
+  |> Enum.map(&String.split(&1, [",", " -> "]))
+  |> Enum.map(fn line ->
+    Enum.map(line, &String.to_integer/1)
+  end)
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def run(lines) do
+    filtered_lines =
+      lines
+      |> Enum.filter(fn
+        [x1, y1, x2, y2] -> x1 == x2 || y1 == y2
+      end)
+
+    points =
+      filtered_lines
+      |> Enum.map(fn [x1, y1, x2, y2] ->
+        for x <- x1..x2 do
+          for y <- y1..y2 do
+            {x, y}
+          end
+        end
+      end)
+      |> List.flatten()
+
+    board = Enum.reduce(points, %{}, fn coords, acc -> Map.update(acc, coords, 1, &(&1 + 1)) end)
+    Enum.count(board, fn {_, v} -> v > 1 end)
+  end
+end
+
+Part1.run(lines)
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def run(lines) do
+    points =
+      lines
+      |> Enum.map(fn
+        [x, y1, x, y2] ->
+          for y <- y1..y2, do: {x, y}
+
+        [x1, y, x2, y] ->
+          for x <- x1..x2, do: {x, y}
+
+        [x1, y1, x2, y2] ->
+          Enum.zip(x1..x2, y1..y2)
+      end)
+      |> List.flatten()
+
+    board = Enum.reduce(points, %{}, fn coords, acc -> Map.update(acc, coords, 1, &(&1 + 1)) end)
+
+    Enum.count(board, fn {_, v} -> v > 1 end) |> IO.puts()
+  end
+end
+```

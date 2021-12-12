@@ -1,0 +1,47 @@
+# Day 2
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+Kino.Input.read(input)
+|> String.split("\n", trim: true)
+|> Enum.map(&String.split(&1, " "))
+|> Enum.reduce({0, 0}, fn [command, amt], {p, d} ->
+  amt = String.to_integer(amt)
+
+  case command do
+    "forward" -> {p + amt, d}
+    "down" -> {p, d + amt}
+    "up" -> {p, d - amt}
+  end
+end)
+|> then(fn {p, d} -> IO.inspect({p, d, p * d}) end)
+```
+
+## Part 2
+
+```elixir
+Kino.Input.read(input)
+|> String.split("\n", trim: true)
+|> Enum.map(&String.split(&1, " "))
+|> Enum.reduce({0, 0, 0}, fn [command, amt], {p, d, a} ->
+  amt = String.to_integer(amt)
+
+  case command do
+    "down" -> {p, d, a + amt}
+    "up" -> {p, d, a - amt}
+    "forward" -> {p + amt, d + amt * a, a}
+  end
+end)
+|> then(fn {p, d, a} -> IO.inspect({p, d, a, p * d}) end)
+```
