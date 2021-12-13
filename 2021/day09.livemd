@@ -1,0 +1,88 @@
+# Day 9
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input =
+  Kino.Input.read(input)
+  |> String.split(["\n"], trim: true)
+  |> Enum.map(&String.split(&1, "", trim: true))
+  |> Enum.map(fn line ->
+    Enum.map(line, &String.to_integer/1)
+  end)
+  |> Enum.with_index()
+  |> then(fn rows ->
+    for {lst, y} <- rows do
+      for {item, x} <- Enum.with_index(lst) do
+        {{x, y}, item}
+      end
+    end
+    |> List.flatten()
+    |> Map.new()
+  end)
+
+is_low_point = fn map, {{x, y}, val} ->
+  lower_points =
+    [{x - 1, y}, {x + 1, y}, {x, y - 1}, {x, y + 1}]
+    |> Enum.map(&Map.get(map, &1))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.filter(&(val >= &1))
+
+  lower_points == []
+end
+
+low_points = Enum.filter(input, &is_low_point.(input, &1))
+```
+
+## Part 1
+
+```elixir
+low_points
+|> Enum.map(fn {{_, _}, h} -> h + 1 end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def run(point, grid) do
+    run_point(MapSet.new(), point, grid)
+    |> Enum.map(&grid[&1])
+    |> length
+  end
+
+  def run_point(set, point = {x, y}, grid) do
+    if point in set || grid[point] in [9, nil] do
+      set
+    else
+      set
+      |> MapSet.put(point)
+      |> run_point({x + 1, y}, grid)
+      |> run_point({x - 1, y}, grid)
+      |> run_point({x, y + 1}, grid)
+      |> run_point({x, y - 1}, grid)
+    end
+  end
+end
+
+low_points
+|> Enum.map(fn {point, _} -> Part2.run(point, input) end)
+|> Enum.sort()
+|> Enum.take(-3)
+|> Enum.product()
+```
