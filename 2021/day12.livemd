@@ -1,0 +1,132 @@
+# Day 12
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+lines = input |> Kino.Input.read() |> String.split("\n", trim: true)
+
+map =
+  Enum.reduce(lines, %{}, fn x, acc ->
+    [k, v] = String.split(x, "-")
+    acc = Map.update(acc, k, [v], &[v | &1])
+
+    if k == "start" or v == "end" do
+      acc
+    else
+      Map.update(acc, v, [k], &[k | &1])
+    end
+  end)
+```
+
+## Part 1
+
+```elixir
+defmodule CaveNavigation do
+  def run(map) do
+    start = map["start"]
+    seen = MapSet.new(["start"])
+    nav(start, map, seen, ["start"], 0)
+  end
+
+  defp nav(["end" | caves], map, seen, path, count) do
+    nav(caves, map, seen, path, count + 1)
+  end
+
+  defp nav([cave | caves], map, seen, path, count) do
+    count =
+      cond do
+        # Small and seen
+        cave in seen ->
+          count
+
+        # Small NOT seen
+        small_cave?(cave) ->
+          nav(map[cave], map, MapSet.put(seen, cave), [cave | path], count)
+
+        # Big 
+        true ->
+          nav(map[cave], map, seen, [cave | path], count)
+      end
+
+    nav(caves, map, seen, path, count)
+  end
+
+  defp nav([], _map, _seen, _path, count) do
+    count
+  end
+
+  defp small_cave?(s), do: String.downcase(s) == s
+end
+
+CaveNavigation.run(map)
+```
+
+## Part 2
+
+```elixir
+defmodule CaveNavigation2 do
+  def run(map) do
+    map = remove_starts(map)
+    start = map["start"]
+    seen = MapSet.new(["start"])
+    nav(start, map, seen, ["start"], nil, 0)
+  end
+
+  defp nav(["end" | caves], map, seen, path, jolly, count) do
+    nav(caves, map, seen, path, jolly, count + 1)
+  end
+
+  defp nav([cave | caves], map, seen, path, jolly, count) do
+    count =
+      cond do
+        # Small and seen
+        cave in seen ->
+          case jolly do
+            nil ->
+              nav(map[cave], map, seen, [cave | path], cave, count)
+
+            _ ->
+              count
+          end
+
+        # Small NOT seen
+        small_cave?(cave) ->
+          nav(map[cave], map, MapSet.put(seen, cave), [cave | path], jolly, count)
+
+        # Big 
+        true ->
+          nav(map[cave], map, seen, [cave | path], jolly, count)
+      end
+
+    nav(caves, map, seen, path, jolly, count)
+  end
+
+  defp nav([], _map, _seen, _path, _jolly, count) do
+    count
+  end
+
+  defp small_cave?(s), do: String.downcase(s) == s
+
+  defp remove_starts(map) do
+    Enum.reduce(map, %{}, fn {k, v}, acc ->
+      Map.put(acc, k, Enum.reject(v, &(&1 == "start")))
+    end)
+  end
+end
+
+CaveNavigation2.run(map)
+```

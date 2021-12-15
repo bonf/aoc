@@ -1,0 +1,110 @@
+# Day 13
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+[lines_raw, folds_raw] = input |> Kino.Input.read() |> String.split("\n\n")
+
+lines = String.split(lines_raw, "\n", trim: true)
+
+folds =
+  folds_raw
+  |> String.split("\n", trim: true)
+  |> Enum.map(fn
+    "fold along y=" <> v -> {:vertical, String.to_integer(v)}
+    "fold along x=" <> v -> {:horizontal, String.to_integer(v)}
+  end)
+
+points =
+  lines
+  |> Enum.map(&String.split(&1, ",", trim: true))
+  |> Enum.map(fn [a, b] -> {String.to_integer(a), String.to_integer(b)} end)
+  |> MapSet.new()
+```
+
+```elixir
+defmodule Sheet do
+  defstruct x: 0, y: 0, points: MapSet.new()
+
+  def new(points) do
+    x = Enum.map(points, &elem(&1, 0)) |> Enum.max()
+    y = Enum.map(points, &elem(&1, 1)) |> Enum.max()
+
+    %Sheet{points: points, x: x + 1, y: y + 1}
+  end
+
+  def print(sheet) do
+    for y <- 0..sheet.y do
+      for x <- 0..sheet.x do
+        if {x, y} in sheet.points, do: "#", else: "."
+      end
+    end
+    |> Enum.map(&Enum.join(&1, ""))
+    |> Enum.join("\n")
+    |> IO.puts()
+  end
+end
+
+defmodule Folder do
+  def fold(sheet, {:horizontal, amount}), do: horizontal(sheet, amount)
+  def fold(sheet, {:vertical, amount}), do: vertical(sheet, amount)
+
+  defp vertical(sheet, amount) do
+    _fold(
+      sheet,
+      fn {_x, y} -> y < amount end,
+      fn {x, y} -> {x, amount - (y - amount)} end
+    )
+  end
+
+  defp horizontal(sheet, amount) do
+    _fold(
+      sheet,
+      fn {x, _y} -> x < amount end,
+      fn {x, y} -> {amount - (x - amount), y} end
+    )
+  end
+
+  defp _fold(sheet, splitter_fn, folder_fn) do
+    {still, moving} = Enum.split_with(sheet.points, splitter_fn)
+
+    moving = moving |> Enum.map(folder_fn)
+
+    (still ++ moving)
+    |> Enum.uniq()
+    |> Sheet.new()
+  end
+end
+```
+
+## Part 1
+
+```elixir
+# sheet = Enum.reduce(folds, Sheet.new(points), fn command, acc -> Folder.fold(acc,command) end)
+# Sheet.print(sheet)
+
+sheet = Sheet.new(points) |> Folder.fold(hd(folds))
+# Sheet.print(sheet)
+length(sheet.points)
+```
+
+## Part 2
+
+```elixir
+sheet = Enum.reduce(folds, Sheet.new(points), fn command, acc -> Folder.fold(acc, command) end)
+Sheet.print(sheet)
+```

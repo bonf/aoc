@@ -1,0 +1,118 @@
+# Day 11
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+lines = input |> Kino.Input.read() |> String.split("\n", trim: true)
+
+grid =
+  for {line, y} <- Enum.with_index(lines),
+      {number, x} <- Enum.with_index(String.to_charlist(line)),
+      into: %{} do
+    {{x, y}, number - ?0}
+  end
+```
+
+```elixir
+defmodule OctopusGrid do
+  def step(grid) do
+    # IO.inspect(grid, label: "STEP")
+    {grid, set} = grid |> step_up |> run_flashes |> set_to_0
+    {grid, MapSet.size(set)}
+  end
+
+  defp step_up(grid) do
+    Enum.reduce(grid, grid, fn {{x, y}, _}, acc -> inc(acc, x, y) end)
+  end
+
+  defp run_flashes(grid) do
+    run_flash({grid, MapSet.new()}, to_flash(grid))
+  end
+
+  defp run_flash({grid, set}, []), do: {grid, set}
+
+  defp run_flash({grid, set}, [h | t]) do
+    case MapSet.member?(set, h) do
+      true ->
+        run_flash({grid, set}, t)
+
+      _ ->
+        grid = flash(h, grid)
+
+        t =
+          (to_flash(grid) ++ [h] ++ t)
+          |> Enum.uniq()
+
+        run_flash({grid, MapSet.put(set, h)}, t)
+    end
+  end
+
+  def flash(_point = {x, y}, grid) do
+    grid = inc(grid, x + 1, y)
+    grid = inc(grid, x + 1, y + 1)
+    grid = inc(grid, x, y + 1)
+    grid = inc(grid, x - 1, y + 1)
+    grid = inc(grid, x - 1, y)
+    grid = inc(grid, x - 1, y - 1)
+    grid = inc(grid, x, y - 1)
+    inc(grid, x + 1, y - 1)
+  end
+
+  def set_to_0({grid, set}) do
+    grid = Enum.reduce(set, grid, fn point, acc -> Map.put(acc, point, 0) end)
+    {grid, set}
+  end
+
+  defp inc(grid, x, y) do
+    case grid[{x, y}] do
+      nil -> grid
+      val -> Map.put(grid, {x, y}, val + 1)
+    end
+  end
+
+  defp to_flash(grid),
+    do: Enum.filter(grid, fn {_point, val} -> val > 9 end) |> Enum.map(fn {point, _} -> point end)
+
+  def fully_flashed?(grid), do: Map.values(grid) |> Enum.uniq() == [0]
+end
+```
+
+## Part 1
+
+```elixir
+Enum.reduce(1..100, {grid, 0}, fn _, {grid, tot_flashes} ->
+  {grid, flashes} = OctopusGrid.step(grid)
+  {grid, flashes + tot_flashes}
+end)
+```
+
+## Part 2
+
+```elixir
+Enum.reduce_while(1..1000, grid, fn i, acc ->
+  {grid, _flashes} = OctopusGrid.step(acc)
+  IO.inspect(Map.values(grid) |> Enum.sum(), label: "step #{i}")
+
+  case OctopusGrid.fully_flashed?(grid) do
+    true ->
+      {:halt, i}
+
+    false ->
+      {:cont, grid}
+  end
+end)
+```

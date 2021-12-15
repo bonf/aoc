@@ -1,0 +1,109 @@
+# Day 10
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+input =
+  Kino.Input.read(input)
+  |> String.split(["\n"], trim: true)
+  |> Enum.map(&String.split(&1, "", trim: true))
+```
+
+```elixir
+
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  @openings ["[", "(", "<", "{"]
+  @endings ["]", ")", ">", "}"]
+
+  def parse_line(line) do
+    _parse(line, [])
+  end
+
+  defp _parse([], stack), do: {:ok, reverse(stack)}
+
+  defp _parse([h | t], stack) do
+    cond do
+      h in @openings ->
+        _parse(t, [h] ++ stack)
+
+      h in @endings ->
+        if mismatch?(hd(stack), h) do
+          {:error, h}
+        else
+          _parse(t, List.delete_at(stack, 0))
+        end
+    end
+  end
+
+  defp mismatch?("<", ">"), do: false
+  defp mismatch?("(", ")"), do: false
+  defp mismatch?("{", "}"), do: false
+  defp mismatch?("[", "]"), do: false
+  defp mismatch?(_, _), do: true
+
+  defp reverse(lst), do: lst
+
+  def error_score(")"), do: 3
+  def error_score("]"), do: 57
+  def error_score("}"), do: 1197
+  def error_score(">"), do: 25137
+end
+
+input
+|> Enum.map(&Part1.parse_line(&1))
+|> Enum.filter(fn {a, _} -> a == :error end)
+|> Enum.map(fn {:error, sym} -> Part1.error_score(sym) end)
+|> Enum.sum()
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def complete_line(line) do
+    line |> Enum.map(&closing(&1)) |> calculate_score
+  end
+
+  def calculate_score(line) do
+    Enum.reduce(line, 0, fn i, acc ->
+      acc * 5 + score(i)
+    end)
+  end
+
+  defp closing("("), do: ")"
+  defp closing("["), do: "]"
+  defp closing("{"), do: "}"
+  defp closing("<"), do: ">"
+
+  def score(")"), do: 1
+  def score("]"), do: 2
+  def score("}"), do: 3
+  def score(">"), do: 4
+end
+
+input
+|> Enum.map(&Part1.parse_line(&1))
+|> Enum.filter(fn {a, _} -> a == :ok end)
+|> Enum.map(fn {_, line} -> Part2.complete_line(line) end)
+|> Enum.sort()
+|> then(&Enum.at(&1, floor(length(&1) / 2.0)))
+```
