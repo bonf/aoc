@@ -1,0 +1,139 @@
+# Day 15
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}, {:libgraph, "0.13.3"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+grid =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(&String.split(&1, "", trim: true))
+  |> Enum.map(fn line -> Enum.map(line, &String.to_integer/1) end)
+
+map =
+  for {line, y} <- Enum.with_index(grid), {cost, x} <- Enum.with_index(line), into: %{} do
+    {{x, y}, cost}
+  end
+
+width = map |> Enum.map(fn {{x, _}, _} -> x end) |> Enum.max()
+height = map |> Enum.map(fn {{_, y}, _} -> y end) |> Enum.max()
+
+exit = {width, height}
+```
+
+## Part 1
+
+```elixir
+neighbours = fn {x, y}, map ->
+  [
+    {x, y - 1},
+    {x, y + 1},
+    {x + 1, y},
+    {x - 1, y}
+  ]
+  |> Enum.filter(&(!is_nil(map[&1])))
+end
+
+edges =
+  Enum.flat_map(map, fn {point, _} ->
+    Enum.reduce(neighbours.(point, map), [], fn point2, acc ->
+      [{point, point2, map[point2]}] ++ acc
+    end)
+  end)
+
+graph =
+  Enum.reduce(edges, Graph.new(), fn {p1, p2, cost}, acc ->
+    acc |> Graph.add_edge(p1, p2, weight: cost)
+  end)
+
+Graph.dijkstra(graph, {0, 0}, exit)
+|> tl()
+|> Enum.map(&map[&1])
+|> Enum.sum()
+```
+
+## Part 2
+
+This only works by fixing the hashing function in libgraph
+see https://github.com/bitwalker/libgraph/issues/44b
+
+```elixir
+defmodule Part2 do
+  def multiply_input(input) do
+    lines =
+      input
+      |> String.split("\n", trim: true)
+      |> Enum.map(&String.split(&1, "", trim: true))
+      |> Enum.map(fn line -> Enum.map(line, &String.to_integer/1) end)
+      |> Enum.map(fn line -> multiply_line(line) end)
+
+    grid =
+      Enum.reduce(0..4, [], fn i, acc ->
+        acc ++ Enum.map(lines, &inc_line(&1, i))
+      end)
+
+    map =
+      for {line, y} <- Enum.with_index(grid), {cost, x} <- Enum.with_index(line), into: %{} do
+        {{x, y}, cost}
+      end
+  end
+
+  defp inc_line(line, d) do
+    Enum.map(line, &inc(&1, d))
+  end
+
+  def multiply_line(line) do
+    Enum.flat_map(0..4, fn i ->
+      Enum.map(line, &inc(&1, i))
+    end)
+  end
+
+  defp inc(n, d) do
+    tot = n + d
+
+    cond do
+      tot <= 9 -> tot
+      true -> tot - 9
+    end
+  end
+end
+
+map = Part2.multiply_input(input)
+
+edges =
+  Enum.flat_map(map, fn {point, _} ->
+    Enum.reduce(neighbours.(point, map), [], fn point2, acc ->
+      [{point, point2, map[point2]}] ++ acc
+    end)
+  end)
+
+width = map |> Enum.map(fn {{x, _}, _} -> x end) |> Enum.max()
+height = map |> Enum.map(fn {{_, y}, _} -> y end) |> Enum.max()
+
+exit = {width, height} |> IO.inspect(label: :exit)
+
+graph =
+  Enum.reduce(edges, Graph.new(), fn {p1, p2, cost}, acc ->
+    acc |> Graph.add_edge(p1, p2, weight: cost)
+  end)
+  |> IO.inspect()
+
+Graph.dijkstra(graph, {0, 0}, exit)
+|> tl()
+|> Enum.map(&map[&1])
+|> Enum.sum()
+```

@@ -1,0 +1,85 @@
+# Day 14
+
+## Setup
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+## Input
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Common Input parsing
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+[template, rules] = input |> Kino.Input.read() |> String.split("\n\n", trim: true)
+
+rules =
+  rules
+  |> String.split("\n", trim: true)
+  |> Enum.map(&String.split(&1, " -> ", trim: true))
+  |> Enum.map(fn [a, b] ->
+    {
+      String.to_charlist(a),
+      String.to_charlist(b) |> hd
+    }
+  end)
+  |> Map.new()
+
+template =
+  template
+  |> String.to_charlist()
+  |> Enum.chunk_every(2, 1)
+  |> Enum.frequencies()
+```
+
+```elixir
+step = fn template, rules ->
+  template
+  |> Enum.map(fn
+    {k = [a, b], cnt} ->
+      char = rules[k]
+      [{[a, char], cnt}, {[char, b], cnt}]
+
+    c ->
+      c
+  end)
+  |> List.flatten()
+  |> Enum.reduce(%{}, fn {k, cnt}, acc ->
+    acc |> Map.update(k, cnt, &(&1 + cnt))
+  end)
+end
+```
+
+## Part 1
+
+```elixir
+{{_, min}, {_, max}} =
+  1..10
+  |> Enum.reduce(template, fn _, acc -> step.(acc, rules) end)
+  |> Enum.reduce(%{}, fn {[h | _], cnt}, acc ->
+    Map.update(acc, h, cnt, &(&1 + cnt))
+  end)
+  |> Enum.min_max_by(fn {_, v} -> v end)
+
+max - min
+```
+
+## Part 2
+
+```elixir
+{{_, min}, {_, max}} =
+  1..40
+  |> Enum.reduce(template, fn _, acc -> step.(acc, rules) end)
+  |> Enum.reduce(%{}, fn {[h | _], cnt}, acc ->
+    Map.update(acc, h, cnt, &(&1 + cnt))
+  end)
+  |> Enum.min_max_by(fn {_, v} -> v end)
+
+max - min
+```
