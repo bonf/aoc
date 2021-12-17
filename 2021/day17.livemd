@@ -1,0 +1,102 @@
+<!-- vim: syntax=markdown -->
+
+# Day 17
+
+## Setup
+
+```elixir
+Mix.install([
+  {:kino, "~> 0.4.1"}
+])
+```
+
+```elixir
+input = Kino.Input.textarea("test input:")
+```
+
+```elixir
+input = input |> Kino.Input.read()
+
+[_, x1, x2, _, y1, y2] = String.split(input, ["x=", "y=", "..", ", "])
+[x1, x2] = [String.to_integer(x1), String.to_integer(x2)] |> Enum.sort()
+[y1, y2] = [String.to_integer(y1), String.to_integer(y2)] |> Enum.sort()
+
+target = %{x1: x1, x2: x2, y1: y1, y2: y2}
+```
+
+```elixir
+defmodule Cannon do
+  def fire(vx, vy, target) do
+    rec(vx, vy, [{0, 0}], target)
+  end
+
+  def rec(vx, vy, [h = {x, y} | _] = path, target) do
+    cond do
+      # Success
+      in_target?(h, target) ->
+        {:ok, Enum.reverse(path)}
+
+      # Too far abort
+      too_far?(h, target) ->
+        {:error, Enum.reverse(path)}
+
+      true ->
+        x = x + vx
+        y = y + vy
+        vx = new_vx(vx)
+        vy = vy - 1
+
+        rec(vx, vy, [{x, y} | path], target)
+    end
+  end
+
+  def new_vx(0), do: 0
+  def new_vx(n), do: if(n > 0, do: n - 1, else: n + 1)
+
+  def in_target?({x, y}, target) do
+    x >= target.x1 and x <= target.x2 and y >= target.y1 and y <= target.y2
+  end
+
+  def too_far?({x, y}, target) do
+    x > target.x2 or y < target.y1
+  end
+end
+```
+
+## Part 1
+
+```elixir
+target |> IO.inspect()
+
+starts = for x <- 1..target.x2, y <- -100..100, do: {x, y}
+
+starts
+|> Enum.map(fn {vx, vy} ->
+  Cannon.fire(vx, vy, target)
+end)
+|> Enum.reject(fn {res, _} -> res == :error end)
+|> Enum.map(fn {_, path} ->
+  Enum.max_by(path, fn {_x, y} -> y end) |> elem(1)
+end)
+|> Enum.max()
+
+# Cannon.fire(6,9, target)
+```
+
+## Part 2
+
+```elixir
+starts = for x <- 1..target.x2, y <- -500..500, do: {x, y}
+
+starts
+|> Enum.map(fn {vx, vy} ->
+  Cannon.fire(vx, vy, target)
+end)
+|> Enum.reject(fn {res, _} -> res == :error end)
+|> tap(&(length(&1) |> IO.inspect(label: :distinct_count)))
+|> Enum.map(fn {_, path} ->
+  Enum.max_by(path, fn {_x, y} -> y end) |> elem(1)
+end)
+|> Enum.max()
+|> IO.inspect()
+```
