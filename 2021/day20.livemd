@@ -1,0 +1,125 @@
+# Day 20
+
+## Section
+
+```elixir
+Mix.install([{:kino, "0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+[algo, img] = input |> Kino.Input.read() |> String.split("\n\n", trim: true)
+
+algo =
+  algo
+  |> String.replace("\n", "")
+  |> String.split("", trim: true)
+  |> Enum.with_index(0)
+  |> Map.new(fn {a, b} -> {b, a} end)
+
+image_lines = img |> String.split("\n", trim: true)
+
+image =
+  for {line, y} <- Enum.with_index(image_lines),
+      {pixel, x} <- Enum.with_index(String.split(line, "", trim: true)) do
+    {{x, y}, pixel}
+  end
+  |> Map.new()
+```
+
+## Section
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule Day20 do
+  def enhance(image, algo, cnt) do
+    {max_x, max_y} = get_image_size(image)
+
+    for y <- -2..(max_y + 2), x <- -2..(max_x + 2) do
+      {{x + 2, y + 2}, enhance_pixel({x, y}, image, algo, cnt)}
+    end
+    # for y <- 0..(max_y), x <- 0..(max_x) do
+    #   {{x , y }, enhance_pixel({x, y}, image, algo)}
+    # end
+
+    # |> List.flatten()
+    |> Map.new()
+  end
+
+  defp enhance_pixel({x, y}, image, algo, cnt) do
+    # works with real input
+    default = if rem(cnt, 2) == 0, do: algo[0], else: algo[511]
+    # works with example input
+    # default = algo[0]
+    idx =
+      [
+        {x - 1, y - 1},
+        {x, y - 1},
+        {x + 1, y - 1},
+        {x - 1, y},
+        {x, y},
+        {x + 1, y},
+        {x - 1, y + 1},
+        {x, y + 1},
+        {x + 1, y + 1}
+      ]
+      |> Enum.map(&digit(Map.get(image, &1, default)))
+      |> Integer.undigits(2)
+
+    algo[idx]
+  end
+
+  defp digit("."), do: 0
+  defp digit("#"), do: 1
+
+  defp get_image_size(image) do
+    {
+      Map.keys(image) |> Enum.map(&elem(&1, 0)) |> Enum.max(),
+      Map.keys(image) |> Enum.map(&elem(&1, 1)) |> Enum.max()
+    }
+  end
+
+  def print(image) do
+    {max_x, max_y} = get_image_size(image)
+    IO.puts("\n\n")
+
+    for y <- 0..max_y do
+      Enum.reduce(0..max_x, "", fn x, acc -> "#{acc}#{image[{x, y}]}" end)
+    end
+    |> Enum.join("\n")
+    |> IO.puts()
+  end
+end
+```
+
+## Part 1
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+new_image =
+  image
+  |> tap(&Day20.print(&1))
+  |> Day20.enhance(algo, 1)
+  |> tap(&Day20.print(&1))
+  |> Day20.enhance(algo, 2)
+  |> tap(&Day20.print(&1))
+  |> Map.values()
+  |> Enum.frequencies()
+  |> Map.get("#")
+```
+
+## Part 2
+
+```elixir
+Enum.reduce(1..50, image, fn idx, acc ->
+  Day20.enhance(acc, algo, idx)
+end)
+|> Map.values()
+|> Enum.frequencies()
+|> Map.get("#")
+```

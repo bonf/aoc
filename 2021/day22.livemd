@@ -1,0 +1,112 @@
+# Day 22
+
+## Section
+
+```elixir
+Mix.install([{:kino, "0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+reboot_steps =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.map(&String.split(&1, " "))
+  |> Enum.map(fn [cmd, line] ->
+    cmd = String.to_atom(cmd)
+
+    [x, y, z] =
+      String.split(line, [",", "x=", "y=", "z="], trim: true)
+      |> Enum.map(fn txt_range ->
+        String.split(txt_range, "..")
+        |> Enum.map(&String.to_integer/1)
+      end)
+      |> Enum.map(fn [a, b] -> a..b end)
+
+    {cmd, x, y, z}
+  end)
+```
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule Day22 do
+  def initialize(steps) do
+    reactor = MapSet.new()
+
+    steps = filter_steps(steps)
+
+    Enum.reduce(steps, reactor, fn step, acc ->
+      IO.inspect(step)
+      run_step(acc, step, -50..50)
+    end)
+  end
+
+  def reboot(steps) do
+    reactor = MapSet.new()
+
+    Enum.reduce(steps, reactor, fn step, acc ->
+      IO.inspect(step)
+      run_step(acc, step, -50..50)
+    end)
+  end
+
+  defp run_step(state, {:on, x_range, y_range, z_range}, limit_range) do
+    cubes = cuboid(x_range, y_range, z_range, limit_range)
+
+    Enum.reduce(cubes, state, fn cube, acc ->
+      MapSet.put(acc, cube)
+    end)
+  end
+
+  defp run_step(state, {:off, x_range, y_range, z_range}, limit_range) do
+    cubes = cuboid(x_range, y_range, z_range, limit_range)
+
+    Enum.reduce(cubes, state, fn cube, acc ->
+      MapSet.delete(acc, cube)
+    end)
+  end
+
+  def cuboid(x_range, y_range, z_range, limit_range) do
+    for x <- x_range,
+        y <- y_range,
+        z <- z_range,
+        x in limit_range,
+        y in limit_range,
+        z in limit_range do
+      {x, y, z}
+    end
+  end
+
+  defp filter_steps(steps) do
+    steps
+    |> Enum.filter(fn {_, x1..x2, y1..y2, z1..z2} ->
+      abs(x1) <= 50 and abs(x2) <= 50 and
+        abs(y1) <= 50 and abs(y2) <= 50 and
+        abs(z1) <= 50 and abs(z2) <= 50
+    end)
+  end
+end
+```
+
+## Part 1
+
+```elixir
+Day22.initialize(reboot_steps) |> MapSet.size()
+
+# Day22.cuboid(0..2, 0..2, 0..2, -1..1)
+```
+
+## Part 2
+
+```elixir
+# Day22.reboot(reboot_steps) |> MapSet.size()
+```
+
+```elixir
+
+```

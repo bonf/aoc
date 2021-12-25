@@ -1,0 +1,130 @@
+# Day 25
+
+## Section
+
+```elixir
+Mix.install([{:kino, "0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+```elixir
+input =
+  input
+  |> Kino.Input.read()
+  |> String.split("\n", trim: true)
+  |> Enum.with_index()
+  |> Enum.flat_map(fn {line, y} ->
+    for {char, x} <- line |> String.codepoints() |> Enum.with_index() do
+      case char do
+        ">" -> {{x, y}, :east}
+        "v" -> {{x, y}, :south}
+        "." -> {{x, y}, :empty}
+      end
+    end
+  end)
+  |> Map.new()
+```
+
+## Section
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+defmodule Day25 do
+  def part1(map) do
+    # step(input, 0)
+
+    step(map, 0)
+  end
+
+  def step(map, cnt) do
+    # print(map, cnt)
+    {east_herd, south_herd} = get_herds(map)
+    {map, east_moves} = move_herd(map, east_herd)
+    {map, south_moves} = move_herd(map, south_herd)
+
+    if cnt > 1_000_000, do: raise("boom")
+
+    case east_moves + south_moves do
+      0 -> {:ok, cnt + 1}
+      _ -> step(map, cnt + 1)
+    end
+  end
+
+  defp move_herd(map, herd) do
+    moves = herd |> Enum.map(&move(map, &1)) |> Enum.reject(&is_nil(&1))
+
+    map =
+      Enum.reduce(moves, map, fn {{x1, y1}, {x2, y2}, kind}, acc ->
+        acc
+        |> Map.put({x1, y1}, :empty)
+        |> Map.put({x2, y2}, kind)
+      end)
+
+    {map, length(moves)}
+  end
+
+  def move(map, cucumber = {pos, kind}) do
+    next_pos = get_next(map, cucumber)
+
+    case map[next_pos] do
+      # |> IO.inspect()
+      :empty -> {pos, next_pos, kind}
+      _ -> nil
+    end
+  end
+
+  def get_next(map, {{x, y}, :east}) do
+    case Map.get(map, {x + 1, y}) do
+      nil -> {0, y}
+      _ -> {x + 1, y}
+    end
+  end
+
+  def get_next(map, {{x, y}, :south}) do
+    case Map.get(map, {x, y + 1}) do
+      nil -> {x, 0}
+      _ -> {x, y + 1}
+    end
+  end
+
+  defp get_herds(map) do
+    herds = Enum.group_by(map, fn {_, v} -> v end)
+    {herds[:east], herds[:south]}
+  end
+
+  def print(map, cnt) do
+    IO.puts("#-------------#{cnt}--------")
+    {{max_x, max_y}, _} = Enum.max(map)
+
+    Enum.map(0..max_y, fn y ->
+      Enum.map(0..max_x, fn x ->
+        case Map.fetch!(map, {x, y}) do
+          :east -> ">"
+          :south -> "v"
+          :empty -> "."
+        end
+      end)
+      |> Enum.concat(["\n"])
+    end)
+    |> IO.puts()
+  end
+end
+```
+
+## Part 1
+
+<!-- livebook:{"reevaluate_automatically":true} -->
+
+```elixir
+Day25.part1(input)
+```
+
+## Part 2
+
+```elixir
+
+```
