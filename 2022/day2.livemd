@@ -1,0 +1,122 @@
+# 2022- Day 2
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+defmodule Part1 do
+  def solve(input) do
+    input
+    |> parse()
+    |> Enum.map(&round_score(&1))
+    |> Enum.sum()
+  end
+
+  defp parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.split(&1, " "))
+    |> Enum.map(fn [a, b] ->
+      {decode(a), decode(b)}
+    end)
+  end
+
+  defp round_score({_a, b} = round) do
+    points(round_result(round)) + points(b)
+  end
+
+  defp round_result({a, a}), do: :draw
+  defp round_result({:scissors, :rock}), do: :win
+  defp round_result({:paper, :scissors}), do: :win
+  defp round_result({:rock, :paper}), do: :win
+  defp round_result(_), do: :loss
+
+  defp points(:win), do: 6
+  defp points(:draw), do: 3
+  defp points(:loss), do: 0
+
+  defp points(:rock), do: 1
+  defp points(:paper), do: 2
+  defp points(:scissors), do: 3
+
+  defp decode("A"), do: :rock
+  defp decode("B"), do: :paper
+  defp decode("C"), do: :scissors
+  defp decode("X"), do: :rock
+  defp decode("Y"), do: :paper
+  defp decode("Z"), do: :scissors
+end
+
+Kino.Input.read(input)
+|> Part1.solve()
+```
+
+## Part 2
+
+```elixir
+defmodule Part2 do
+  def solve(input) do
+    input
+    |> parse()
+    |> Enum.map(&round_score(&1))
+    |> Enum.sum()
+  end
+
+  defp parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.split(&1, " "))
+    |> Enum.map(fn [a, b] ->
+      a = decode(a)
+      b = decode(b)
+      {a, choose_shape(b, a)}
+    end)
+  end
+
+  defp round_score({_a, b} = round) do
+    points(round_result(round)) + points(b)
+  end
+
+  defp round_result({a, a}), do: :draw
+  defp round_result({:scissors, :rock}), do: :win
+  defp round_result({:paper, :scissors}), do: :win
+  defp round_result({:rock, :paper}), do: :win
+  defp round_result(_), do: :loss
+
+  defp choose_shape(:draw, opponent_shape), do: opponent_shape
+  defp choose_shape(:win, :rock), do: :paper
+  defp choose_shape(:win, :paper), do: :scissors
+  defp choose_shape(:win, :scissors), do: :rock
+  defp choose_shape(:loss, :rock), do: :scissors
+  defp choose_shape(:loss, :paper), do: :rock
+  defp choose_shape(:loss, :scissors), do: :paper
+
+  defp points(:win), do: 6
+  defp points(:draw), do: 3
+  defp points(:loss), do: 0
+
+  defp points(:rock), do: 1
+  defp points(:paper), do: 2
+  defp points(:scissors), do: 3
+
+  defp decode("A"), do: :rock
+  defp decode("B"), do: :paper
+  defp decode("C"), do: :scissors
+
+  defp decode("X"), do: :loss
+  defp decode("Y"), do: :draw
+  defp decode("Z"), do: :win
+end
+
+Kino.Input.read(input)
+|> Part2.solve()
+```
