@@ -1,0 +1,56 @@
+# 2022- Day 1
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+defmodule Day4 do
+  def part1(input) do
+    input
+    |> Enum.map(&parse_couple(&1))
+    |> Enum.filter(&fully_contained?(&1))
+    |> Enum.count()
+  end
+
+  def part2(input) do
+    input
+    |> Enum.map(&parse_couple(&1))
+    |> Enum.filter(&overlap?(&1))
+    |> Enum.count()
+  end
+
+  defp parse_couple(str) do
+    str |> String.split(",") |> Enum.map(&to_range(&1))
+  end
+
+  defp to_range(str) do
+    [min, max] = str |> String.split("-") |> Enum.map(&String.to_integer(&1))
+    min..max
+  end
+
+  defp fully_contained?([r1, r2]) do
+    includes?(r1, r2) || includes?(r2, r1)
+  end
+
+  defp includes?(r1a..r1b, r2a..r2b) do
+    r1a <= r2a && r1b >= r2b
+  end
+
+  defp overlap?([r1, r2]) do
+    !Range.disjoint?(r1, r2)
+  end
+end
+
+Kino.Input.read(input)
+|> String.split("\n", trim: true)
+|> Day4.part2()
+```

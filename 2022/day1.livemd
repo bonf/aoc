@@ -1,0 +1,44 @@
+# 2022- Day 1
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+defmodule Day1 do
+  def part1(input) do
+    input
+    |> count_calories()
+    |> Enum.max()
+  end
+
+  def part2(input) do
+    input
+    |> count_calories()
+    |> Enum.sort(&(&1 >= &2))
+    |> Enum.chunk_every(3)
+    |> hd()
+    |> Enum.sum()
+  end
+
+  defp count_calories(input) do
+    input
+    |> String.split("\n\n")
+    |> Enum.map(fn lines ->
+      String.split(lines, "\n") |> Enum.map(&String.to_integer(&1))
+    end)
+    |> Enum.map(&Enum.sum(&1))
+  end
+end
+
+Kino.Input.read(input)
+|> Day1.part2()
+```
