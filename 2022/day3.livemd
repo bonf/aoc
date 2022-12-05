@@ -1,0 +1,78 @@
+# 2022- Day 3
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+defmodule Day5 do
+  def part1(input) do
+    priorities = build_priorities()
+
+    input
+    |> parse()
+    |> Enum.map(&Enum.split(&1, trunc(length(&1) / 2)))
+    |> Enum.map(&intersection(&1))
+    |> Enum.map(&priorities[List.to_string(&1)])
+    |> Enum.sum()
+  end
+
+  def part2(input) do
+    priorities = build_priorities()
+
+    input
+    |> parse()
+    |> Enum.chunk_every(3)
+    |> Enum.map(&intersection(&1))
+    |> Enum.map(&priorities[List.to_string(&1)])
+    |> Enum.sum()
+  end
+
+  defp parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.to_charlist(&1))
+  end
+
+  defp intersection([a, b, c]) do
+    tmp = intersection({a, b})
+    intersection({tmp, c})
+  end
+
+  defp intersection({a, b}) do
+    tmp = a -- b
+    (a -- tmp) |> Enum.uniq()
+  end
+
+  defp build_priorities() do
+    build_priorities(?a..?z, 1)
+    |> Map.merge(build_priorities(?A..?Z, 27))
+  end
+
+  def build_priorities(range, start) do
+    range
+    |> Enum.to_list()
+    |> Enum.with_index(start)
+    |> Enum.map(fn {k, v} -> {List.to_string([k]), v} end)
+    |> Map.new()
+  end
+end
+
+Kino.Input.read(input)
+|> Day5.part1()
+```
+
+## Part 2
+
+```elixir
+Kino.Input.read(input)
+|> Day5.part2()
+```
