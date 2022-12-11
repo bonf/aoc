@@ -1,0 +1,146 @@
+# 2022- Day 11
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+%{a: 1, b: fn x -> x + 1 end}
+```
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n\n")
+    |> Enum.map(&parse_monkey(&1))
+    |> Enum.with_index()
+    |> Enum.map(fn {a, b} -> {b, a} end)
+    |> Map.new()
+  end
+
+  defp parse_monkey(lines) do
+    lines = map_lines(lines)
+
+    %{
+      n: get_number(lines[0]),
+      items: get_items(lines[1]),
+      test: get_test(lines[3]),
+      test_true: get_test_true(lines[4]),
+      test_false: get_test_false(lines[5]),
+      operation: get_operation(lines[2]),
+      count: 0
+    }
+  end
+
+  defp get_number("Monkey " <> n), do: n |> String.replace(":", "") |> String.to_integer()
+
+  defp get_items("Starting items: " <> items) do
+    items |> String.split(",") |> Enum.map(&String.trim(&1)) |> Enum.map(&String.to_integer(&1))
+  end
+
+  defp get_test("Test: divisible by " <> n), do: String.to_integer(n)
+
+  defp get_test_true("If true: throw to monkey " <> n), do: String.to_integer(n)
+  defp get_test_false("If false: throw to monkey " <> n), do: String.to_integer(n)
+
+  defp get_operation("Operation: new = old * old"), do: fn x -> x * x end
+
+  defp get_operation("Operation: new = old + old"), do: fn x -> x + x end
+
+  defp get_operation("Operation: new = old * " <> n) do
+    n = String.to_integer(n)
+    fn x -> x * n end
+  end
+
+  defp get_operation("Operation: new = old + " <> n) do
+    n = String.to_integer(n)
+    fn x -> x + n end
+  end
+
+  defp map_lines(lines) do
+    lines
+    |> String.split("\n", trim: true)
+    |> Enum.map(&String.trim(&1))
+    |> Enum.with_index()
+    |> Enum.map(fn {a, b} -> {b, a} end)
+    |> Map.new()
+  end
+end
+
+defmodule Day11 do
+  def part1(monkeys) do
+    Enum.reduce(1..20, monkeys, fn _, acc -> run_round(acc, :part1) end)
+    |> Enum.map(&elem(&1, 1).count)
+    |> Enum.sort_by(fn x -> -x end)
+    |> Enum.take(2)
+    |> Enum.product()
+  end
+
+  def part2(monkeys) do
+    Enum.reduce(1..10000, monkeys, fn _, acc -> run_round(acc, :part2) end)
+    |> Enum.map(&elem(&1, 1).count)
+    |> Enum.sort_by(fn x -> -x end)
+    |> Enum.take(2)
+    |> Enum.product()
+  end
+
+  defp run_round(monkeys, part) do
+    keys = Map.keys(monkeys) |> Enum.sort()
+    lcm = calc_lcm(monkeys)
+    Enum.reduce(keys, monkeys, fn idx, acc -> examine(acc[idx], acc, part, lcm) end)
+  end
+
+  def examine(%{items: []}, state, _, _) do
+    state
+  end
+
+  def examine(%{items: [h | t]} = monkey, state, part, lcm) do
+    worry = calc_worry(part, h, monkey.operation, lcm)
+
+    state =
+      if rem(worry, monkey.test) == 0 do
+        throw_item(state, monkey.n, monkey.test_true, worry)
+      else
+        throw_item(state, monkey.n, monkey.test_false, worry)
+      end
+
+    examine(%{monkey | items: t}, state, part, lcm)
+  end
+
+  defp throw_item(state, from, to, item) do
+    monkey1 = state[from]
+    monkey1 = %{monkey1 | items: tl(monkey1.items), count: monkey1.count + 1}
+
+    monkey2 = state[to]
+    monkey2 = %{monkey2 | items: monkey2.items ++ [item]}
+
+    state |> Map.put(from, monkey1) |> Map.put(to, monkey2)
+  end
+
+  defp calc_worry(:part1, item, fun, _lcm), do: floor(fun.(item) / 3.0)
+  defp calc_worry(:part2, item, fun, lcm), do: rem(fun.(item), lcm)
+
+  defp calc_lcm(state), do: Enum.reduce(state, 1, fn {_, x}, acc -> x.test * acc end)
+end
+
+Kino.Input.read(input)
+|> Parser.parse()
+|> Day11.part1()
+```
+
+## Part 2
+
+```elixir
+Kino.Input.read(input)
+|> Parser.parse()
+|> Day11.part2()
+```

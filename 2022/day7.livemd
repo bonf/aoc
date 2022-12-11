@@ -1,4 +1,4 @@
-# 2022- Day 10
+# 2022- Day 7
 
 ## Section
 
@@ -13,86 +13,142 @@ input = Kino.Input.textarea("input")
 ## Part 1
 
 ```elixir
-defmodule Parser do
-  def parse(input) do
-    input
-    |> String.split("\n", trim: true)
-    |> Enum.map(&decode(&1))
-  end
-
-  defp decode("noop"), do: {:noop, 0}
-  defp decode("addx " <> val), do: {:addx, String.to_integer(val)}
+defmodule Dir do
+  defstruct name: "", parent: "", files: [], subdirs: []
 end
 ```
 
 ```elixir
-defmodule VM do
-  @interesting [20, 60, 100, 140, 180, 220]
-
-  def part1(program) do
-    {_x, strengths, _} = execute(program, 1, 1, [], %{}, 0, [])
-    IO.inspect(strengths)
-    Enum.reduce(strengths, 0, fn {k, v}, acc -> acc + k * v end)
+defmodule Parser do
+  def parse(input) do
+    read(input)
+    |> build_fs()
   end
 
-  def part2(program) do
-    {_x, _strengths, pixels} = execute(program, 1, 1, [], %{}, 0, [])
-
-    pixels
-    |> Enum.chunk_every(40)
-    |> Enum.map(&List.to_string(&1))
-    |> Enum.each(&IO.puts(&1))
+  def read(input) do
+    input |> String.split("\n", trim: true)
   end
 
-  defp execute([], _idx, x, [], strengths, _crt, pixels) do
-    {x, strengths, pixels}
+  defp build_fs(lines) do
+    fs = %{"/" => %Dir{parent: nil, name: "/"}}
+    execute_cmd(lines, fs, "/")
   end
 
-  defp execute([code | t], idx, x, additions, strengths, crt, pixels) do
-    strengths = register_strength(strengths, x, idx)
-    additions = run_instruction(code, additions)
-    pixels = pixels ++ draw_pixel(x, crt)
-    crt = rem(crt + 1, 40)
-    x = x + hd(additions)
-    execute(t, idx + 1, x, tl(additions), strengths, crt, pixels)
+  defp execute_cmd(["$ cd /" | t], fs, _current_path) do
+    execute_cmd(t, fs, "/")
   end
 
-  defp execute([], idx, x, [h | t], strengths, crt, pixels) do
-    strengths = register_strength(strengths, x, idx)
-    pixels = pixels ++ draw_pixel(x, crt)
-    crt = rem(crt + 1, 40)
-    x = x + h
-    execute([], idx + 1, x, t, strengths, crt, pixels)
+  defp execute_cmd(["$ cd .." | t], fs, current_path) do
+    dir = Map.get(fs, current_path)
+    execute_cmd(t, fs, dir.parent)
   end
 
-  defp register_strength(strengths, x, idx) do
-    if idx in @interesting do
-      Map.put(strengths, idx, x)
-    else
-      strengths
-    end
+  defp execute_cmd(["$ cd " <> name | t], fs, current_path) do
+    execute_cmd(t, fs, build_path(current_path, name))
   end
 
-  defp run_instruction({:noop, _}, additions), do: additions ++ [0]
-  defp run_instruction({:addx, n}, additions), do: additions ++ [0, n]
+  defp execute_cmd(["$ ls" | t], fs, current_path) do
+    {output, t} = Enum.split_while(t, &(!String.starts_with?(&1, "$")))
 
-  defp draw_pixel(x, crt) do
-    case crt in [x - 1, x, x + 1] do
-      true -> ['#']
-      false -> ['.']
-    end
+    {subdirs, files} =
+      Enum.reduce(output, {[], []}, fn x, {subdirs, files} ->
+        case String.starts_with?(x, "dir") do
+          true ->
+            subdirs = subdirs ++ [String.replace(x, "dir ", "")]
+            {subdirs, files}
+
+          false ->
+            [size, name] = String.split(x, " ")
+            files = files ++ [%{name: name, size: String.to_integer(size)}]
+            {subdirs, files}
+        end
+      end)
+
+    # update current dir
+    dir =
+      Map.get(fs, current_path)
+      |> Map.put(:subdirs, subdirs)
+      |> Map.put(:files, files)
+
+    fs = Map.put(fs, current_path, dir)
+
+    # add subdirs
+    fs =
+      Enum.reduce(subdirs, fs, fn x, acc ->
+        new_path = build_path(current_path, x)
+        Map.put(acc, new_path, %Dir{parent: current_path, name: new_path})
+      end)
+
+    execute_cmd(t, fs, current_path)
+  end
+
+  defp execute_cmd([], fs, _current_path), do: fs
+
+  def build_path(a, b) do
+    "#{a}/#{b}" |> String.replace("//", "/")
+  end
+end
+```
+
+```elixir
+defmodule Part1 do
+  def solve(input) do
+    input
+    |> Parser.parse()
+    |> solve_part1()
+  end
+
+  defp solve_part1(fs) do
+    Map.keys(fs)
+    |> Enum.map(&{&1, dir_size(fs, &1)})
+    |> Enum.filter(fn {_, size} -> size < 100_000 end)
+    |> Enum.map(&elem(&1, 1))
+    |> Enum.sum()
+  end
+
+  def dir_size(fs, path) do
+    dir = Map.get(fs, path)
+    file_size = Enum.sum(Enum.map(dir.files, & &1.size))
+
+    subdir_size =
+      dir.subdirs
+      |> Enum.map(fn name ->
+        dir_size(fs, Parser.build_path(path, name))
+      end)
+      |> Enum.sum()
+
+    file_size + subdir_size
   end
 end
 
 Kino.Input.read(input)
-|> Parser.parse()
-|> VM.part1()
+|> Part1.solve()
 ```
 
 ## Part 2
 
 ```elixir
+defmodule Part2 do
+  def solve(input) do
+    input
+    |> Parser.parse()
+    |> solve_part2()
+  end
+
+  def solve_part2(fs) do
+    used = Part1.dir_size(fs, "/")
+    free = 70_000_000 - used
+    to_free = 30_000_000 - free
+
+    Map.keys(fs)
+    |> Enum.map(&{&1, Part1.dir_size(fs, &1)})
+    |> Enum.filter(fn {_, s} -> s >= to_free end)
+    |> Enum.sort_by(fn {_, s} -> s end)
+    |> hd
+    |> elem(1)
+  end
+end
+
 Kino.Input.read(input)
-|> Parser.parse()
-|> VM.part2()
+|> Part2.solve()
 ```

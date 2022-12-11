@@ -1,0 +1,98 @@
+# 2022- Day 10
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+defmodule Parser do
+  def parse(input) do
+    input
+    |> String.split("\n", trim: true)
+    |> Enum.map(&decode(&1))
+  end
+
+  defp decode("noop"), do: {:noop, 0}
+  defp decode("addx " <> val), do: {:addx, String.to_integer(val)}
+end
+```
+
+```elixir
+defmodule VM do
+  @interesting [20, 60, 100, 140, 180, 220]
+
+  def part1(program) do
+    {_x, strengths, _} = execute(program, 1, 1, [], %{}, 0, [])
+    IO.inspect(strengths)
+    Enum.reduce(strengths, 0, fn {k, v}, acc -> acc + k * v end)
+  end
+
+  def part2(program) do
+    {_x, _strengths, pixels} = execute(program, 1, 1, [], %{}, 0, [])
+
+    pixels
+    |> Enum.chunk_every(40)
+    |> Enum.map(&List.to_string(&1))
+    |> Enum.each(&IO.puts(&1))
+  end
+
+  defp execute([], _idx, x, [], strengths, _crt, pixels) do
+    {x, strengths, pixels}
+  end
+
+  defp execute([code | t], idx, x, additions, strengths, crt, pixels) do
+    strengths = register_strength(strengths, x, idx)
+    additions = run_instruction(code, additions)
+    pixels = pixels ++ draw_pixel(x, crt)
+    crt = rem(crt + 1, 40)
+    x = x + hd(additions)
+    execute(t, idx + 1, x, tl(additions), strengths, crt, pixels)
+  end
+
+  defp execute([], idx, x, [h | t], strengths, crt, pixels) do
+    strengths = register_strength(strengths, x, idx)
+    pixels = pixels ++ draw_pixel(x, crt)
+    crt = rem(crt + 1, 40)
+    x = x + h
+    execute([], idx + 1, x, t, strengths, crt, pixels)
+  end
+
+  defp register_strength(strengths, x, idx) do
+    if idx in @interesting do
+      Map.put(strengths, idx, x)
+    else
+      strengths
+    end
+  end
+
+  defp run_instruction({:noop, _}, additions), do: additions ++ [0]
+  defp run_instruction({:addx, n}, additions), do: additions ++ [0, n]
+
+  defp draw_pixel(x, crt) do
+    case crt in [x - 1, x, x + 1] do
+      true -> ['#']
+      false -> ['.']
+    end
+  end
+end
+
+Kino.Input.read(input)
+|> Parser.parse()
+|> VM.part1()
+```
+
+## Part 2
+
+```elixir
+Kino.Input.read(input)
+|> Parser.parse()
+|> VM.part2()
+```
