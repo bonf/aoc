@@ -1,0 +1,76 @@
+# 2022- Day 6
+
+## Section
+
+```elixir
+Mix.install([{:kino, "~> 0.4.1"}])
+```
+
+```elixir
+input = Kino.Input.textarea("input")
+```
+
+## Part 1
+
+```elixir
+defmodule Day5 do
+  def part1(input) do
+    input
+    |> String.to_charlist()
+    |> detect_packet()
+  end
+
+  def part2(input) do
+    input
+    |> String.to_charlist()
+    |> detect_msg()
+  end
+
+  defp detect_packet([h | t]) do
+    detect_packet(t, [h], 1)
+  end
+
+  defp detect_packet([h | t], [a], idx), do: detect_packet(t, [a, h], idx + 1)
+  defp detect_packet([h | t], [a, b], idx), do: detect_packet(t, [a, b, h], idx + 1)
+  defp detect_packet([h | t], [a, b, c], idx), do: detect_packet(t, [a, b, c, h], idx + 1)
+
+  defp detect_packet([h | t], [_, b, c, d] = item, idx) do
+    if length(Enum.uniq(item)) == 4 do
+      IO.inspect(item, label: "solution")
+      idx
+    else
+      detect_packet(t, [b, c, d, h], idx + 1)
+    end
+  end
+
+  defp detect_packet([], [_, _, _, _], _), do: :ERR
+
+  defp detect_msg([h | t]), do: detect_msg(t, [h], 1)
+
+  defp detect_msg([h | t], acc, idx) do
+    if length(acc) == 14 do
+      if length(Enum.uniq(acc)) == 14 do
+        IO.inspect(acc, label: :solution)
+        idx
+      else
+        acc = tl(acc) ++ [h]
+        detect_msg(t, acc, idx + 1)
+      end
+    else
+      detect_msg(t, acc ++ [h], idx + 1)
+    end
+  end
+
+  defp detect_msg([], _, _), do: :ERR
+end
+
+Kino.Input.read(input)
+|> Day5.part1()
+```
+
+## Part 2
+
+```elixir
+Kino.Input.read(input)
+|> Day5.part2()
+```
